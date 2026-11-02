@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import { AppLoggerService } from '../../logger/logger.service';
 
 @Injectable()
@@ -17,7 +17,7 @@ export class RequestLoggingInterceptor implements NestInterceptor {
     const request = context.switchToHttp().getRequest();
     const start = Date.now();
 
-    const requestId = request.headers['x-request-id'] || uuidv4();
+    const requestId = request.headers['x-request-id'] || randomUUID();
     request.requestId = requestId;
 
     const meta = {

@@ -9,7 +9,7 @@ import { InjectModel } from '@nestjs/sequelize';
 import { CreationAttributes, Transaction } from 'sequelize';
 import { Sequelize } from 'sequelize-typescript';
 import * as bcrypt from 'bcrypt';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -261,7 +261,7 @@ export class AuthService {
     user: User,
     transaction?: Transaction,
   ): Promise<string> {
-    const jti = uuidv4();
+    const jti = randomUUID();
     const refreshPayload: JwtPayload = {
       sub: user.id,
       email: user.email,
