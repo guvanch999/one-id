@@ -35,7 +35,12 @@ import { AppLoggerService } from './logger/logger.service';
             ? (msg: string) => appLogger.debug(msg, 'Sequelize')
             : false,
           dialectOptions: db.ssl
-            ? { ssl: { require: true, rejectUnauthorized: false } }
+            ? {
+                ssl: {
+                  require: true,
+                  rejectUnauthorized: db.sslRejectUnauthorized,
+                },
+              }
             : {},
         };
       },

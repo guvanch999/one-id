@@ -5,7 +5,8 @@ export class LogoutDto {
   @ApiProperty({
     required: false,
     description:
-      'Опциональный refresh token. Если не передан — инвалидируются все токены пользователя.',
+      'Optional refresh token. If provided, only that session is revoked; ' +
+      'otherwise all refresh tokens of the user are revoked.',
   })
   @IsOptional()
   @IsString()

@@ -10,7 +10,14 @@ const base = {
   logging: false,
   dialectOptions:
     (process.env.DB_SSL || '').toLowerCase() === 'true'
-      ? { ssl: { require: true, rejectUnauthorized: false } }
+      ? {
+          ssl: {
+            require: true,
+            rejectUnauthorized:
+              (process.env.DB_SSL_REJECT_UNAUTHORIZED || '').toLowerCase() !==
+              'false',
+          },
+        }
       : {},
 };
 

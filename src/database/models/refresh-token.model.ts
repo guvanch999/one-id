@@ -6,7 +6,6 @@ import {
   ForeignKey,
   BelongsTo,
   Index,
-  DefaultScope,
 } from 'sequelize-typescript';
 import type {
   CreationOptional,
@@ -15,9 +14,6 @@ import type {
 } from 'sequelize';
 import { User } from './user.model';
 
-@DefaultScope(() => ({
-  where: { revoked: false },
-}))
 @Table({
   tableName: 'refresh_tokens',
   timestamps: true,

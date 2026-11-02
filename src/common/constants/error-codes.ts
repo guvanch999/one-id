@@ -7,5 +7,7 @@ export enum ErrorCode {
   CONFLICT = 'conflict',
   TOKEN_EXPIRED = 'token_expired',
   TOKEN_REVOKED = 'token_revoked',
+  TOKEN_REUSED = 'token_reused',
   INVALID_CREDENTIALS = 'invalid_credentials',
+  ACCOUNT_BLOCKED = 'account_blocked',
 }

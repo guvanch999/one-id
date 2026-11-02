@@ -1,6 +1,10 @@
 import { registerAs } from '@nestjs/config';
 
-const parseTtlToSeconds = (value: string | undefined, fallback: number) => {
+/** Parses a TTL given as seconds ("900") or with a unit ("15m", "30d"). */
+export const parseTtlToSeconds = (
+  value: string | undefined,
+  fallback: number,
+) => {
   if (!value) {
     return fallback;
   }
@@ -36,13 +40,28 @@ export interface JwtConfig {
   audience: string;
 }
 
+/**
+ * Returns the secret from the environment. Outside production a well-known
+ * development fallback is used; in production a missing secret is fatal.
+ */
+const readSecret = (name: string, devFallback: string): string => {
+  const value = process.env[name];
+  if (value) {
+    return value;
+  }
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(`${name} must be set when NODE_ENV=production`);
+  }
+  return devFallback;
+};
+
 export default registerAs(
   'jwt',
   (): JwtConfig => ({
     accessTokenTtl: parseTtlToSeconds(process.env.JWT_ACCESS_TTL, 900),
     refreshTokenTtl: parseTtlToSeconds(process.env.JWT_REFRESH_TTL, 2592000),
-    accessSecret: process.env.JWT_ACCESS_SECRET || 'change-me-access',
-    refreshSecret: process.env.JWT_REFRESH_SECRET || 'change-me-refresh',
+    accessSecret: readSecret('JWT_ACCESS_SECRET', 'dev-access-secret'),
+    refreshSecret: readSecret('JWT_REFRESH_SECRET', 'dev-refresh-secret'),
     issuer: process.env.JWT_ISSUER || 'one-id',
     audience: process.env.JWT_AUDIENCE || 'one-id-clients',
   }),

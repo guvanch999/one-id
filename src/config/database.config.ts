@@ -8,6 +8,7 @@ export interface DatabaseConfig {
   database: string;
   logging: boolean;
   ssl: boolean;
+  sslRejectUnauthorized: boolean;
 }
 
 export default registerAs(
@@ -20,5 +21,8 @@ export default registerAs(
     database: process.env.DB_NAME || 'oneid',
     logging: (process.env.DB_LOGGING || '').toLowerCase() === 'true',
     ssl: (process.env.DB_SSL || '').toLowerCase() === 'true',
+    // Verify the server certificate unless explicitly disabled.
+    sslRejectUnauthorized:
+      (process.env.DB_SSL_REJECT_UNAUTHORIZED || '').toLowerCase() !== 'false',
   }),
 );

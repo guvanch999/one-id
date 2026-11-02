@@ -10,6 +10,28 @@ import { ErrorCode } from '../constants/error-codes';
 import { AppLoggerService } from '../../logger/logger.service';
 import type { RequestWithContext } from '../types/request-context';
 
+interface NormalizedError {
+  status: number;
+  message: string;
+  code: ErrorCode;
+  details: unknown;
+}
+
+interface HttpExceptionBody {
+  message?: string | string[];
+  error?: string;
+  details?: unknown;
+}
+
+const ERROR_CODES = new Set<string>(Object.values(ErrorCode));
+
+/**
+ * Renders every error as `{ error, message, details, timestamp, path, requestId }`.
+ *
+ * When an exception carries one of our domain error codes in its `error`
+ * field (e.g. `token_revoked`), that code is returned as-is; otherwise the
+ * code is derived from the HTTP status.
+ */
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   constructor(private readonly logger: AppLoggerService) {}
@@ -19,11 +41,20 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<RequestWithContext>();
 
-    const { status, message, code, details } = this.normalizeError(
-      exception as Error,
-    );
+    const { status, message, code, details } = this.normalizeError(exception);
 
-    this.logger.error(message, (exception as Error)?.stack, 'HttpException');
+    if (status >= 500) {
+      this.logger.error(
+        exception instanceof Error ? exception.message : String(exception),
+        exception instanceof Error ? exception.stack : undefined,
+        HttpExceptionFilter.name,
+      );
+    } else {
+      this.logger.warn(
+        `${status} ${code}: ${message}`,
+        HttpExceptionFilter.name,
+      );
+    }
 
     response.status(status).json({
       error: code,
@@ -35,35 +66,41 @@ export class HttpExceptionFilter implements ExceptionFilter {
     });
   }
 
-  private normalizeError(exception: Error) {
-    if (exception instanceof HttpException) {
-      const status = exception.getStatus();
-      const response = exception.getResponse() as
-        | string
-        | { message?: string | string[]; error?: string };
-      const message =
-        typeof response === 'string'
-          ? response
-          : Array.isArray(response?.message)
-            ? response.message.join(', ')
-            : response?.message || exception.message;
-
-      const details = typeof response === 'string' ? {} : response;
-
+  private normalizeError(exception: unknown): NormalizedError {
+    if (!(exception instanceof HttpException)) {
       return {
-        status,
-        message,
-        code: this.mapStatusToCode(status),
-        details,
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+        message: 'Internal server error',
+        code: ErrorCode.UNKNOWN_ERROR,
+        details: {},
       };
     }
 
-    return {
-      status: HttpStatus.INTERNAL_SERVER_ERROR,
-      message: 'Internal server error',
-      code: ErrorCode.UNKNOWN_ERROR,
-      details: {},
-    };
+    const status = exception.getStatus();
+    const body = exception.getResponse() as string | HttpExceptionBody;
+
+    if (typeof body === 'string') {
+      return {
+        status,
+        message: body,
+        code: this.mapStatusToCode(status),
+        details: {},
+      };
+    }
+
+    const messages = Array.isArray(body.message) ? body.message : undefined;
+    const message = messages
+      ? messages.join(', ')
+      : typeof body.message === 'string' && body.message
+        ? body.message
+        : exception.message;
+    const code =
+      body.error && ERROR_CODES.has(body.error)
+        ? (body.error as ErrorCode)
+        : this.mapStatusToCode(status);
+    const details = body.details ?? (messages ? { errors: messages } : {});
+
+    return { status, message, code, details };
   }
 
   private mapStatusToCode(status: HttpStatus): ErrorCode {
