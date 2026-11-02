@@ -33,4 +33,4 @@ async function bootstrap() {
   appLogger.log(`Server listening on port ${port}`);
 }
 
-bootstrap();
+void bootstrap();

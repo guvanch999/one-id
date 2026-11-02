@@ -5,9 +5,10 @@ import {
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
-import { Request, Response } from 'express';
+import type { Response } from 'express';
 import { ErrorCode } from '../constants/error-codes';
 import { AppLoggerService } from '../../logger/logger.service';
+import type { RequestWithContext } from '../types/request-context';
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -16,10 +17,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
-    const request = ctx.getRequest<Request>();
+    const request = ctx.getRequest<RequestWithContext>();
 
-    const { status, message, code, details } =
-      this.normalizeError(exception as Error);
+    const { status, message, code, details } = this.normalizeError(
+      exception as Error,
+    );
 
     this.logger.error(message, (exception as Error)?.stack, 'HttpException');
 
@@ -29,7 +31,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       details,
       timestamp: new Date().toISOString(),
       path: request.url,
-      requestId: (request as any).requestId,
+      requestId: request.requestId,
     });
   }
 
@@ -64,7 +66,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     };
   }
 
-  private mapStatusToCode(status: number): ErrorCode {
+  private mapStatusToCode(status: HttpStatus): ErrorCode {
     switch (status) {
       case HttpStatus.BAD_REQUEST:
         return ErrorCode.VALIDATION_ERROR;

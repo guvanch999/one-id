@@ -236,15 +236,12 @@ export class AuthService {
       type: 'access',
     };
 
-    const accessToken = await this.jwtService.signAsync(
-      accessPayload,
-      {
-        secret: this.jwtConfig.accessSecret,
-        expiresIn: this.jwtConfig.accessTokenTtl,
-        issuer: this.jwtConfig.issuer,
-        audience: this.jwtConfig.audience,
-      },
-    );
+    const accessToken = await this.jwtService.signAsync(accessPayload, {
+      secret: this.jwtConfig.accessSecret,
+      expiresIn: this.jwtConfig.accessTokenTtl,
+      issuer: this.jwtConfig.issuer,
+      audience: this.jwtConfig.audience,
+    });
 
     const refreshToken = await this.createRefreshToken(user, transaction);
 
@@ -277,7 +274,9 @@ export class AuthService {
     });
 
     const tokenHash = await bcrypt.hash(refreshToken, 12);
-    const decoded = this.jwtService.decode(refreshToken) as { exp?: number };
+    const decoded = this.jwtService.decode<{ exp?: number } | null>(
+      refreshToken,
+    );
     const expiresAt = decoded?.exp
       ? new Date(decoded.exp * 1000)
       : new Date(
