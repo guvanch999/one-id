@@ -1,0 +1,58 @@
+# Local development stack: PostgreSQL, a one-off migration job and the API.
+#
+#   docker compose up -d db            # database only (run the app with npm)
+#   docker compose up --build          # everything
+#
+# The JWT secrets below are placeholders for local use only.
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: oneid
+      POSTGRES_PASSWORD: oneid
+      POSTGRES_DB: oneid
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U oneid -d oneid']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  migrate:
+    build:
+      context: .
+      target: build
+    command: ['npx', 'sequelize-cli', 'db:migrate']
+    environment: &db-env
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: oneid
+      DB_PASSWORD: oneid
+      DB_NAME: oneid
+    depends_on:
+      db:
+        condition: service_healthy
+
+  app:
+    build:
+      context: .
+      target: runtime
+    environment:
+      <<: *db-env
+      # Swagger UI (/docs) is off in production; NODE_ENV=development enables it.
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3000
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-local-dev-access-secret-change-me}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-local-dev-refresh-secret-change-me}
+    ports:
+      - '3000:3000'
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  pgdata:
